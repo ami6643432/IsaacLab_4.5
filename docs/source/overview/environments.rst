@@ -779,6 +779,10 @@ Comprehensive List of Environments
       - Isaac-Open-Drawer-Franka-Play-v0
       - Manager Based
       - **rsl_rl** (PPO), **rl_games** (PPO), **skrl** (PPO)
+    * - Isaac-Open-Drawer-Franka-Fixed-Impedance-v0
+      -
+      - Manager Based
+      - **rsl_rl** (PPO)
     * - Isaac-Quadcopter-Direct-v0
       -
       - Direct

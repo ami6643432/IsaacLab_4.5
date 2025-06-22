@@ -97,7 +97,9 @@ class FixedTrajImpedanceCabinetEnvCfg(CabinetEnvCfg):
         setattr(self.scene, "contact_forces", contact_sensor_cfg)
 
         # Enhanced operational space controller with strict force limits
+        
         from data.singlearm.fixed_traj_impedance_action import FixedTrajImpedanceActionCfg
+
 
         self.actions.arm_action = FixedTrajImpedanceActionCfg(
             asset_name="robot",
@@ -177,6 +179,7 @@ class FixedTrajImpedanceCabinetEnvCfg(CabinetEnvCfg):
         # Phase 4 (iter 700-800): Full force/impedance optimization
 
         from isaaclab_tasks.manager_based.manipulation.cabinet.mdp import force_impedance_mdp
+
 
         # === GRADUAL STRICT CONTACT SYSTEM ===
         # Step 1: Add simple contact force penalty to start building strict contact awareness

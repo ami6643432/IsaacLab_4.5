@@ -1,0 +1,51 @@
+{
+  "source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/config/franka/force_variable_impedance_env_cfg.py": {
+    "backup_path": "configurations/force_variable_impedance_env_cfg.py",
+    "description": "Main environment configuration with 19D action space, force feedback, and curriculum learning",
+    "backup_time": "20250620_185205",
+    "file_size": 10677,
+    "status": "\u2705 SUCCESS"
+  },
+  "source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/config/franka/agents/rsl_rl_ppo_cfg.py": {
+    "backup_path": "configurations/rsl_rl_ppo_cfg.py",
+    "description": "PPO training configuration with optimized hyperparameters for force impedance learning",
+    "backup_time": "20250620_185205",
+    "file_size": 2036,
+    "status": "\u2705 SUCCESS"
+  },
+  "source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/mdp/force_impedance_mdp.py": {
+    "backup_path": "source_code/force_impedance_mdp.py",
+    "description": "Custom MDP functions for force feedback and impedance parameter observations",
+    "backup_time": "20250620_185205",
+    "file_size": 13686,
+    "status": "\u2705 SUCCESS"
+  },
+  "train_force_variable_impedance_direct.py": {
+    "backup_path": "source_code/train_force_variable_impedance_direct.py",
+    "description": "Direct training script for force variable impedance control (VALIDATED WORKING)",
+    "backup_time": "20250620_185205",
+    "file_size": 6212,
+    "status": "\u2705 SUCCESS"
+  },
+  "test_corrected_validation.py": {
+    "backup_path": "tests/test_corrected_validation.py",
+    "description": "Validation test script that confirms 19D action space and environment functionality",
+    "backup_time": "20250620_185205",
+    "file_size": 8036,
+    "status": "\u2705 SUCCESS"
+  },
+  "test_variable_impedance_environments.py": {
+    "backup_path": "tests/test_variable_impedance_environments.py",
+    "description": "Environment testing script for basic functionality validation",
+    "backup_time": "20250620_185205",
+    "file_size": 5689,
+    "status": "\u2705 SUCCESS"
+  },
+  "source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/__init__.py": {
+    "backup_path": "configurations/cabinet_init.py",
+    "description": "Environment registration configuration for gym.make() integration",
+    "backup_time": "20250620_185205",
+    "file_size": 3720,
+    "status": "\u2705 SUCCESS"
+  }
+}

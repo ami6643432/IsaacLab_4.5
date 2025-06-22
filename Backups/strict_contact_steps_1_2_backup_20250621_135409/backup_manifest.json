@@ -1,0 +1,18 @@
+{
+  "backup_timestamp": "20250621_135409",
+  "description": "Backup after completing Steps 1-2 of strict contact force penalties",
+  "status": {
+    "step_1_simple_contact_penalties": "COMPLETE",
+    "step_2_phase_aware_penalties": "COMPLETE",
+    "step_3_non_grasp_penalties": "PENDING",
+    "step_4_smooth_approach_rewards": "PENDING",
+    "step_5_anti_dragging_penalties": "PENDING"
+  },
+  "files_backed_up": [
+    "source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/config/franka/force_variable_impedance_env_cfg.py",
+    "source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/mdp/simple_strict_contact_mdp.py",
+    "source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/mdp/strict_contact_mdp.py",
+    "test_strict_contact_force_penalties.py"
+  ],
+  "system_state": "Working - 13 active reward terms, tensor shapes resolved"
+}

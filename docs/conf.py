@@ -114,7 +114,7 @@ intersphinx_timeout = 10
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "torch": ("https://pytorch.org/docs/stable/", None),  # Fixed URL
+    "torch": ("https://docs.pytorch.org/en/stable/", None),
     "isaac": ("https://docs.omniverse.nvidia.com/py/isaacsim", None),
     "gymnasium": ("https://gymnasium.farama.org/", None),
     "warp": ("https://nvidia.github.io/warp/", None),
@@ -184,13 +184,6 @@ autodoc_mock_imports = [
     "pinocchio",
     "nvidia.srl",
     "flatdict",
-    "sklearn",
-    "scikit-learn", 
-    "scipy",
-    "scipy.stats",
-    "scipy.spatial",
-    "scipy.optimize",
-    "isaaclab_tasks.direct.automate",
 ]
 
 # List of zero or more Sphinx-specific warning categories to be squelched (i.e.,
@@ -214,8 +207,6 @@ suppress_warnings = [
     "ref.python",
     # Suppress autosummary import warnings for modules that depend on Isaac Sim
     "autosummary",
-    'autosummary.failed_import',
-    'autodoc.import_object',
 ]
 
 # -- Internationalization ----------------------------------------------------

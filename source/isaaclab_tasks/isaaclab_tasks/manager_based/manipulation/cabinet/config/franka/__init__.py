@@ -65,3 +65,17 @@ gym.register(
     },
     disable_env_checker=True,
 )
+
+##
+# Fixed trajectory impedance control
+##
+
+gym.register(
+    id="Isaac-Open-Drawer-Franka-Fixed-Impedance-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.fixed_traj_impedance_env_cfg:FixedTrajImpedanceCabinetEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:ForceVariableImpedanceCabinetPPORunnerCfg",
+    },
+    disable_env_checker=True,
+)

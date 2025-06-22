@@ -18,10 +18,7 @@ from isaaclab.utils import configclass
 
 import isaaclab_tasks.manager_based.manipulation.cabinet.mdp as cabinet_mdp
 import isaaclab_tasks.manager_based.manipulation.cabinet.mdp.strict_contact_mdp as strict_mdp
-from isaaclab_tasks.manager_based.manipulation.cabinet.cabinet_env_cfg import (
-    FRAME_MARKER_SMALL_CFG,
-    CabinetEnvCfg,
-)
+from isaaclab_tasks.manager_based.manipulation.cabinet.cabinet_env_cfg import FRAME_MARKER_SMALL_CFG, CabinetEnvCfg
 
 ##
 # Pre-defined configs
@@ -100,9 +97,9 @@ class FixedTrajImpedanceCabinetEnvCfg(CabinetEnvCfg):
         setattr(self.scene, "contact_forces", contact_sensor_cfg)
 
         # Enhanced operational space controller with strict force limits
-        from data.singlearm.fixed_traj_impedance_action import (
-            FixedTrajImpedanceActionCfg,
-        )
+        
+        from data.singlearm.fixed_traj_impedance_action import FixedTrajImpedanceActionCfg
+
 
         self.actions.arm_action = FixedTrajImpedanceActionCfg(
             asset_name="robot",
@@ -181,9 +178,8 @@ class FixedTrajImpedanceCabinetEnvCfg(CabinetEnvCfg):
         # Phase 3 (iter 500-700): Introduce force awareness
         # Phase 4 (iter 700-800): Full force/impedance optimization
 
-        from isaaclab_tasks.manager_based.manipulation.cabinet.mdp import (
-            force_impedance_mdp,
-        )
+        from isaaclab_tasks.manager_based.manipulation.cabinet.mdp import force_impedance_mdp
+
 
         # === GRADUAL STRICT CONTACT SYSTEM ===
         # Step 1: Add simple contact force penalty to start building strict contact awareness
@@ -200,9 +196,7 @@ class FixedTrajImpedanceCabinetEnvCfg(CabinetEnvCfg):
         setattr(self.rewards, "simple_contact_penalty", simple_contact_penalty)
 
         # STEP 2: Phase-aware contact penalties - different thresholds for different manipulation phases
-        from isaaclab_tasks.manager_based.manipulation.cabinet.mdp import (
-            simple_strict_contact_mdp as simple_strict_mdp,
-        )
+        from isaaclab_tasks.manager_based.manipulation.cabinet.mdp import simple_strict_contact_mdp as simple_strict_mdp
 
         # Approach phase - strictest penalties (should be minimal contact)
         approach_contact_penalty = RewTerm(

@@ -9,12 +9,9 @@ import torch
 from typing import Sequence
 
 import isaaclab.utils.math as math_utils
-from isaaclab.controllers.differential_ik import DifferentialIKController
-from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
+from isaaclab.controllers.differential_ik import DifferentialIKController, DifferentialIKControllerCfg
 from isaaclab.envs.mdp.actions.actions_cfg import OperationalSpaceControllerActionCfg
-from isaaclab.envs.mdp.actions.task_space_actions import (
-    OperationalSpaceControllerAction,
-)
+from isaaclab.envs.mdp.actions.task_space_actions import OperationalSpaceControllerAction
 from isaaclab.utils import configclass
 
 

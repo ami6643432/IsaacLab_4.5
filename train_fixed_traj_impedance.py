@@ -23,12 +23,8 @@ from rsl_rl.runners import OnPolicyRunner
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
-from isaaclab_tasks.manager_based.manipulation.cabinet.config.franka.agents.rsl_rl_ppo_cfg import (
-    ForceVariableImpedanceCabinetPPORunnerCfg,
-)
-from isaaclab_tasks.manager_based.manipulation.cabinet.config.franka.fixed_traj_impedance_env_cfg import (
-    FixedTrajImpedanceCabinetEnvCfg,
-)
+from isaaclab_tasks.manager_based.manipulation.cabinet.config.franka.agents.rsl_rl_ppo_cfg import ForceVariableImpedanceCabinetPPORunnerCfg
+from isaaclab_tasks.manager_based.manipulation.cabinet.config.franka.fixed_traj_impedance_env_cfg import FixedTrajImpedanceCabinetEnvCfg
 from isaaclab_tasks.utils.fixed_traj_sm import FixedTrajStateMachine
 
 

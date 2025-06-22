@@ -6,20 +6,30 @@
 from __future__ import annotations
 
 import torch
-from typing import Sequence
+from typing import Sequence, TYPE_CHECKING
 
 import isaaclab.utils.math as math_utils
-from isaaclab.controllers.differential_ik import DifferentialIKController, DifferentialIKControllerCfg
+from isaaclab.controllers import DifferentialIKController, DifferentialIKControllerCfg
 from isaaclab.envs.mdp.actions.actions_cfg import OperationalSpaceControllerActionCfg
 from isaaclab.envs.mdp.actions.task_space_actions import OperationalSpaceControllerAction
 from isaaclab.utils import configclass
+
+if TYPE_CHECKING:
+    from isaaclab.envs import ManagerBasedEnv
 
 
 @configclass
 class FixedTrajImpedanceActionCfg(OperationalSpaceControllerActionCfg):
     """Configuration for :class:`FixedTrajImpedanceAction`."""
 
-    class_type: type = None  # assigned after class definition
+    class_type: type[FixedTrajImpedanceAction] | None = None  # assigned after class definition
+    
+    # Scaling factors for impedance parameters
+    stiffness_scale: float = 1.0
+    """Scale factor for stiffness parameters."""
+    
+    damping_ratio_scale: float = 1.0
+    """Scale factor for damping ratio parameters."""
 
 
 class FixedTrajImpedanceAction(OperationalSpaceControllerAction):
@@ -31,9 +41,14 @@ class FixedTrajImpedanceAction(OperationalSpaceControllerAction):
 
     cfg: FixedTrajImpedanceActionCfg
 
-    def __init__(self, cfg: FixedTrajImpedanceActionCfg, env):
+    def __init__(self, cfg: FixedTrajImpedanceActionCfg, env: ManagerBasedEnv):
         super().__init__(cfg, env)
         self._desired_pose = torch.zeros(self.num_envs, 7, device=self.device)
+        
+        # Add missing scaling attributes required by parent class
+        self._stiffness_scale = cfg.stiffness_scale if hasattr(cfg, 'stiffness_scale') else 1.0
+        self._damping_ratio_scale = cfg.damping_ratio_scale if hasattr(cfg, 'damping_ratio_scale') else 1.0
+        
         # buffers to expose desired joint states
         self.desired_joint_pos = torch.zeros(
             self.num_envs, self._num_DoF, device=self.device

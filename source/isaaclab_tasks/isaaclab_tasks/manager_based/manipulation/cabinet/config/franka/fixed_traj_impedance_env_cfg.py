@@ -17,7 +17,7 @@ from isaaclab.sensors.frame_transformer.frame_transformer_cfg import OffsetCfg
 from isaaclab.utils import configclass
 
 import isaaclab_tasks.manager_based.manipulation.cabinet.mdp as cabinet_mdp
-import isaaclab_tasks.manager_based.manipulation.cabinet.mdp.strict_contact_mdp as strict_mdp
+import isaaclab_tasks.manager_based.manipulation.cabinet.mdp.simple_strict_contact_mdp as simple_strict_mdp
 from isaaclab_tasks.manager_based.manipulation.cabinet.cabinet_env_cfg import FRAME_MARKER_SMALL_CFG, CabinetEnvCfg
 
 ##

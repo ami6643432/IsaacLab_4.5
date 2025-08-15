@@ -1,9 +1,13 @@
+#!/usr/bin/env python3
+
 # Copyright (c) 2025, Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
 """Configuration for fixed trajectory impedance control cabinet manipulation."""
+
+import torch
 
 from isaaclab.controllers.operational_space_cfg import OperationalSpaceControllerCfg
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -16,13 +20,19 @@ from isaaclab.utils import configclass
 import isaaclab.envs.mdp as mdp
 from isaaclab_tasks.manager_based.manipulation.cabinet.cabinet_env_cfg import CabinetEnvCfg
 
-# Import our custom fixed trajectory action
-from .fixed_traj_impedance_action import FixedTrajImpedanceActionCfg
+# Import our custom fixed trajectory action and config
+from .fixed_traj_impedance_action import (
+    FixedTrajImpedanceAction,
+    FixedTrajImpedanceActionCfg,
+)
+
+# Import force impedance MDP functions
+from .mdp import force_impedance_mdp
 
 ##
 # Pre-defined configs
 ##
-from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG  # isort: skip
+from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG
 
 
 @configclass
@@ -58,25 +68,38 @@ class FixedTrajImpedanceEnvCfg(CabinetEnvCfg):
             track_pose=False,
         )
 
+        # Configure Operational Space Controller
+        controller_cfg = OperationalSpaceControllerCfg(
+            # Remove command_types as it's not a valid parameter
+            target_types=["pose_abs"],   # Only need pose_abs
+            impedance_mode="variable",   # Enable variable impedance
+            inertial_dynamics_decoupling=True,
+            partial_inertial_dynamics_decoupling=False,
+            gravity_compensation=True,
+            motion_control_axes_task=[1, 1, 1, 1, 1, 1],  # Control all 6 DOF
+            contact_wrench_control_axes_task=[0, 0, 0, 0, 0, 0],
+            # Base impedance parameters - will be modulated by RL
+            motion_stiffness_task=[200.0, 200.0, 200.0, 20.0, 20.0, 20.0],
+            motion_damping_ratio_task=1.0,
+            # Impedance limits
+            motion_stiffness_limits_task=(50.0, 1000.0),
+            motion_damping_ratio_limits_task=(0.2, 5.0),
+            # Use position control in nullspace
+            nullspace_control="position",
+        )
+
         # Set Actions for fixed trajectory impedance control
-        self.actions.arm_action = FixedTrajImpedanceActionCfg(
+        action_cfg = FixedTrajImpedanceActionCfg(
             asset_name="robot",
             joint_names=["panda_joint.*"],
             body_name="panda_hand",
             body_offset=FixedTrajImpedanceActionCfg.OffsetCfg(pos=(0.0, 0.0, 0.107)),
-            controller_cfg=OperationalSpaceControllerCfg(
-                target_types=["pose_abs"],  # Absolute pose control
-                impedance_mode="variable",
-                motion_control_axes_task=[1, 1, 1, 1, 1, 1],
-                contact_wrench_control_axes_task=[0, 0, 0, 0, 0, 0],
-                motion_damping_ratio_task=1.0,
-                motion_stiffness_task=[200.0, 200.0, 200.0, 20.0, 20.0, 20.0],
-                motion_stiffness_limits_task=(50.0, 1000.0),
-                motion_damping_ratio_limits_task=(0.2, 5.0),
-            ),
-            stiffness_scale=0.1,
-            damping_ratio_scale=0.1,
+            controller_cfg=controller_cfg,
+            stiffness_scale=0.03,  # Scaling for RL actions
+            damping_ratio_scale=0.08,  # Scaling for RL actions
+            class_type=FixedTrajImpedanceAction,
         )
+        self.actions.arm_action = action_cfg
         
         # Binary gripper action
         self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
@@ -88,8 +111,13 @@ class FixedTrajImpedanceEnvCfg(CabinetEnvCfg):
 
         # Enhanced observations for impedance learning
         self.observations.policy.contact_forces = ObsTerm(
-            func=mdp.contact_force_magnitude,
+            func=force_impedance_mdp.contact_force_magnitude,
             params={"sensor_cfg": SceneEntityCfg("contact_forces")},
+        )
+        
+        self.observations.policy.current_impedance = ObsTerm(
+            func=force_impedance_mdp.current_impedance_params,
+            params={"asset_cfg": SceneEntityCfg("robot")},
         )
         
         self.observations.policy.desired_joint_pos = ObsTerm(
@@ -168,6 +196,28 @@ class FixedTrajImpedanceEnvCfg(CabinetEnvCfg):
         reward = torch.exp(-tracking_error)
         
         return reward
+
+
+class FixedTrajImpedanceEnvImp:
+    """Implementation class with additional methods for the environment."""
+    
+    def set_reference_trajectory(self, trajectory: torch.Tensor):
+        """Set the reference trajectory to follow.
+        
+        Args:
+            trajectory: Tensor of shape [num_envs, num_waypoints, 7] with waypoints for each environment.
+        """
+        if not hasattr(self.action_manager, "_terms") or "arm_action" not in self.action_manager._terms:
+            print("Warning: arm_action not found in action manager")
+            return
+        
+        arm_action = self.action_manager._terms["arm_action"]
+        if not hasattr(arm_action, "set_trajectory"):
+            print("Warning: set_trajectory method not found in arm_action")
+            return
+            
+        arm_action.set_trajectory(trajectory)
+        print(f"Set reference trajectory with {trajectory.shape[1]} waypoints.")
 
 
 @configclass 

@@ -8,49 +8,58 @@ Single arm manipulation tasks with variable impedance control.
 """
 
 import gymnasium as gym
+from . import agents  # Import the agents module for configs
 
-from . import agents
-
-##
-# Register Gym environments.
-##
-
+# Register the environments
 gym.register(
     id="Isaac-Variable-Impedance-Cabinet-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    kwargs={
-        "env_cfg_entry_point": f"{__name__}.variable_impedance_cabinet_env_cfg:VariableImpedanceCabinetEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:VariableImpedanceCabinetPPORunnerCfg",
-    },
     disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": "data.singlearm.variable_impedance_cabinet_env_cfg:VariableImpedanceCabinetEnvCfg",
+        "rsl_rl_cfg_entry_point": "data.singlearm.agents.rsl_rl_ppo_cfg:VariableImpedanceCabinetPPORunnerCfg",
+    }
+)
+
+# Register play version
+gym.register(
+    id="Isaac-Variable-Impedance-Cabinet-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",  
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": "data.singlearm.variable_impedance_cabinet_env_cfg:VariableImpedanceCabinetEnvCfg",
+        "rsl_rl_cfg_entry_point": "data.singlearm.agents.rsl_rl_ppo_cfg:VariableImpedanceCabinetPPORunnerCfg",
+    }
 )
 
 gym.register(
-    id="Isaac-Variable-Impedance-Cabinet-Play-v0", 
+    id="Isaac-Variable-Impedance-Cabinet",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    kwargs={
-        "env_cfg_entry_point": f"{__name__}.variable_impedance_cabinet_env_cfg:VariableImpedanceCabinetEnvCfg_PLAY",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:VariableImpedanceCabinetPPORunnerCfg",
-    },
     disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": "data.singlearm.variable_impedance_cabinet_env_cfg:VariableImpedanceCabinetEnvCfg",
+        "rsl_rl_cfg_entry_point": "data.singlearm.agents.rsl_rl_ppo_cfg:VariableImpedanceCabinetPPORunnerCfg",
+    }
 )
 
+# Register fixed trajectory impedance environments
 gym.register(
     id="Isaac-Open-Drawer-Franka-Fixed-Impedance-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    kwargs={
-        "env_cfg_entry_point": f"{__name__}.fixed_traj_impedance_env_cfg:FixedTrajImpedanceEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FixedTrajImpedancePPORunnerCfg",
-    },
     disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": "data.singlearm.fixed_traj_impedance_env_cfg:FixedTrajImpedanceEnvCfg",
+        "rsl_rl_cfg_entry_point": "data.singlearm.agents.rsl_rl_ppo_cfg:FixedTrajImpedancePPORunnerCfg",
+    }
 )
 
+# Register fixed trajectory play version  
 gym.register(
     id="Isaac-Open-Drawer-Franka-Fixed-Impedance-Play-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True, 
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.fixed_traj_impedance_env_cfg:FixedTrajImpedanceEnvCfg_PLAY",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FixedTrajImpedancePPORunnerCfg",
-    },
-    disable_env_checker=True,
+        "env_cfg_entry_point": "data.singlearm.fixed_traj_impedance_env_cfg:FixedTrajImpedanceEnvCfg",
+        "rsl_rl_cfg_entry_point": "data.singlearm.agents.rsl_rl_ppo_cfg:FixedTrajImpedancePPORunnerCfg",
+    }
 )

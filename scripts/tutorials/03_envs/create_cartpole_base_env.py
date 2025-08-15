@@ -3,62 +3,68 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""
-This script demonstrates how to create a simple environment with a cartpole. It combines the concepts of
-scene, action, observation and event managers to create an environment.
-
-.. code-block:: bash
-
-    ./isaaclab.sh -p scripts/tutorials/03_envs/create_cartpole_base_env.py --num_envs 32
-
-"""
-
-"""Launch Isaac Sim Simulator first."""
-
-
-import argparse
-
-from isaaclab.app import AppLauncher
-
-# add argparse arguments
-parser = argparse.ArgumentParser(description="Tutorial on creating a cartpole base environment.")
-parser.add_argument("--num_envs", type=int, default=16, help="Number of environments to spawn.")
-
-# append AppLauncher cli args
-AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
-args_cli = parser.parse_args()
-
-# launch omniverse app
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
-
-"""Rest everything follows."""
-
 import math
-import torch
 
-import isaaclab.envs.mdp as mdp
-from isaaclab.envs import ManagerBasedEnv, ManagerBasedEnvCfg
+import isaaclab.sim as sim_utils
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import TerminationTermCfg as DoneTerm
+from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
 
-from isaaclab_tasks.manager_based.classic.cartpole.cartpole_env_cfg import CartpoleSceneCfg
+import isaaclab_tasks.manager_based.classic.cartpole.mdp as mdp
+
+##
+# Pre-defined configs
+##
+from isaaclab_assets.robots.cartpole import CARTPOLE_CFG  # isort:skip
+
+
+##
+# Scene definition
+##
+
+
+@configclass
+class CartpoleSceneCfg(InteractiveSceneCfg):
+    """Configuration for a cart-pole scene."""
+
+    # ground plane
+    ground = AssetBaseCfg(
+        prim_path="/World/ground",
+        spawn=sim_utils.GroundPlaneCfg(size=(100.0, 100.0)),
+    )
+
+    # cartpole
+    robot: ArticulationCfg = CARTPOLE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+    # lights
+    dome_light = AssetBaseCfg(
+        prim_path="/World/DomeLight",
+        spawn=sim_utils.DomeLightCfg(color=(0.9, 0.9, 0.9), intensity=500.0),
+    )
+
+
+##
+# MDP settings
+##
 
 
 @configclass
 class ActionsCfg:
-    """Action specifications for the environment."""
+    """Action specifications for the MDP."""
 
-    joint_efforts = mdp.JointEffortActionCfg(asset_name="robot", joint_names=["slider_to_cart"], scale=5.0)
+    joint_effort = mdp.JointEffortActionCfg(asset_name="robot", joint_names=["slider_to_cart"], scale=100.0)
 
 
 @configclass
 class ObservationsCfg:
-    """Observation specifications for the environment."""
+    """Observation specifications for the MDP."""
 
     @configclass
     class PolicyCfg(ObsGroup):
@@ -80,25 +86,14 @@ class ObservationsCfg:
 class EventCfg:
     """Configuration for events."""
 
-    # on startup
-    add_pole_mass = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=["pole"]),
-            "mass_distribution_params": (0.1, 0.5),
-            "operation": "add",
-        },
-    )
-
-    # on reset
+    # reset
     reset_cart_position = EventTerm(
         func=mdp.reset_joints_by_offset,
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=["slider_to_cart"]),
             "position_range": (-1.0, 1.0),
-            "velocity_range": (-0.1, 0.1),
+            "velocity_range": (-0.5, 0.5),
         },
     )
 
@@ -107,68 +102,80 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=["cart_to_pole"]),
-            "position_range": (-0.125 * math.pi, 0.125 * math.pi),
-            "velocity_range": (-0.01 * math.pi, 0.01 * math.pi),
+            "position_range": (-0.25 * math.pi, 0.25 * math.pi),
+            "velocity_range": (-0.25 * math.pi, 0.25 * math.pi),
         },
     )
 
 
 @configclass
-class CartpoleEnvCfg(ManagerBasedEnvCfg):
+class RewardsCfg:
+    """Reward terms for the MDP."""
+
+    # (1) Constant running reward
+    alive = RewTerm(func=mdp.is_alive, weight=1.0)
+    # (2) Failure penalty
+    terminating = RewTerm(func=mdp.is_terminated, weight=-2.0)
+    # (3) Primary task: keep pole upright
+    pole_pos = RewTerm(
+        func=mdp.joint_pos_target_l2,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["cart_to_pole"]), "target": 0.0},
+    )
+    # (4) Shaping tasks: lower cart velocity
+    cart_vel = RewTerm(
+        func=mdp.joint_vel_l1,
+        weight=-0.01,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["slider_to_cart"])},
+    )
+    # (5) Shaping tasks: lower pole angular velocity
+    pole_vel = RewTerm(
+        func=mdp.joint_vel_l1,
+        weight=-0.005,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["cart_to_pole"])},
+    )
+
+
+@configclass
+class TerminationsCfg:
+    """Termination terms for the MDP."""
+
+    # (1) Time out
+    time_out = DoneTerm(func=mdp.time_out, time_out=True)
+    # (2) Cart out of bounds
+    cart_out_of_bounds = DoneTerm(
+        func=mdp.joint_pos_out_of_manual_limit,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["slider_to_cart"]), "bounds": (-3.0, 3.0)},
+    )
+
+
+##
+# Environment configuration
+##
+
+
+@configclass
+class CartpoleEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the cartpole environment."""
 
     # Scene settings
-    scene = CartpoleSceneCfg(num_envs=1024, env_spacing=2.5)
+    scene: CartpoleSceneCfg = CartpoleSceneCfg(num_envs=4096, env_spacing=4.0, clone_in_fabric=True)
     # Basic settings
-    observations = ObservationsCfg()
-    actions = ActionsCfg()
-    events = EventCfg()
+    observations: ObservationsCfg = ObservationsCfg()
+    actions: ActionsCfg = ActionsCfg()
+    events: EventCfg = EventCfg()
+    # MDP settings
+    rewards: RewardsCfg = RewardsCfg()
+    terminations: TerminationsCfg = TerminationsCfg()
 
-    def __post_init__(self):
+    # Post initialization
+    def __post_init__(self) -> None:
         """Post initialization."""
+        # general settings
+        self.decimation = 2
+        self.episode_length_s = 5
         # viewer settings
-        self.viewer.eye = [4.5, 0.0, 6.0]
-        self.viewer.lookat = [0.0, 0.0, 2.0]
-        # step settings
-        self.decimation = 4  # env step every 4 sim steps: 200Hz / 4 = 50Hz
+        self.viewer.eye = (8.0, 0.0, 5.0)
         # simulation settings
-        self.sim.dt = 0.005  # sim step every 5ms: 200Hz
-
-
-def main():
-    """Main function."""
-    # parse the arguments
-    env_cfg = CartpoleEnvCfg()
-    env_cfg.scene.num_envs = args_cli.num_envs
-    env_cfg.sim.device = args_cli.device
-    # setup base environment
-    env = ManagerBasedEnv(cfg=env_cfg)
-
-    # simulate physics
-    count = 0
-    while simulation_app.is_running():
-        with torch.inference_mode():
-            # reset
-            if count % 300 == 0:
-                count = 0
-                env.reset()
-                print("-" * 80)
-                print("[INFO]: Resetting environment...")
-            # sample random actions
-            joint_efforts = torch.randn_like(env.action_manager.action)
-            # step the environment
-            obs, _ = env.step(joint_efforts)
-            # print current orientation of pole
-            print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
-            # update counter
-            count += 1
-
-    # close the environment
-    env.close()
-
-
-if __name__ == "__main__":
-    # run the main function
-    main()
-    # close sim app
-    simulation_app.close()
+        self.sim.dt = 1 / 120
+        self.sim.render_interval = self.decimation

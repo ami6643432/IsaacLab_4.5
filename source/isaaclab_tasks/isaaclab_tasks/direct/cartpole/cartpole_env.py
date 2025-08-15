@@ -28,7 +28,7 @@ class CartpoleEnvCfg(DirectRLEnvCfg):
     episode_length_s = 5.0
     action_scale = 100.0  # [N]
     action_space = 1
-    observation_space = 4
+    observation_space = 6
     state_space = 0
 
     # simulation
@@ -64,6 +64,11 @@ class CartpoleEnv(DirectRLEnv):
         self._pole_dof_idx, _ = self.cartpole.find_joints(self.cfg.pole_dof_name)
         self.action_scale = self.cfg.action_scale
 
+
+        # store target pole angles for each environment
+        self.commands = torch.zeros((self.num_envs, 1), device=self.device)
+
+
         self.joint_pos = self.cartpole.data.joint_pos
         self.joint_vel = self.cartpole.data.joint_vel
 
@@ -89,17 +94,30 @@ class CartpoleEnv(DirectRLEnv):
         self.cartpole.set_joint_effort_target(self.actions, joint_ids=self._cart_dof_idx)
 
     def _get_observations(self) -> dict:
-        obs = torch.cat(
-            (
-                self.joint_pos[:, self._pole_dof_idx[0]].unsqueeze(dim=1),
-                self.joint_vel[:, self._pole_dof_idx[0]].unsqueeze(dim=1),
-                self.joint_pos[:, self._cart_dof_idx[0]].unsqueeze(dim=1),
-                self.joint_vel[:, self._cart_dof_idx[0]].unsqueeze(dim=1),
-            ),
-            dim=-1,
-        )
-        observations = {"policy": obs}
-        return observations
+        # basic state
+        self.pole_angle = self.joint_pos[:, self._pole_dof_idx[0]].unsqueeze(dim=1)
+        self.pole_vel = self.joint_vel[:, self._pole_dof_idx[0]].unsqueeze(dim=1)
+        self.cart_pos = self.joint_pos[:, self._cart_dof_idx[0]].unsqueeze(dim=1)
+        self.cart_vel = self.joint_vel[:, self._cart_dof_idx[0]].unsqueeze(dim=1)
+
+        # new extra feature: sine of pole angle (useful for direction / tip height proxy)
+        self.pole_sin = torch.sin(self.pole_angle)
+
+    # concatenate (order: pole_angle, pole_vel, cart_pos, cart_vel, command, pole_sin)
+    obs = torch.cat(
+        (
+            self.pole_angle,
+            self.pole_vel,
+            self.cart_pos,
+            self.cart_vel,
+            self.commands,   # 1 value per env (target pole angle)
+            self.pole_sin,        # NEW 1 value => total +1 obs
+        ),
+        dim=-1,
+    )
+
+    observations = {"policy": obs}
+    return observations
 
     def _get_rewards(self) -> torch.Tensor:
         total_reward = compute_rewards(
@@ -112,6 +130,7 @@ class CartpoleEnv(DirectRLEnv):
             self.joint_vel[:, self._pole_dof_idx[0]],
             self.joint_pos[:, self._cart_dof_idx[0]],
             self.joint_vel[:, self._cart_dof_idx[0]],
+            self.commands.squeeze(dim=1),
             self.reset_terminated,
         )
         return total_reward
@@ -149,6 +168,10 @@ class CartpoleEnv(DirectRLEnv):
         self.cartpole.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self.cartpole.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
 
+        # sample target angles between -0.2 and 0.2 radians
+        self.commands[env_ids, 0] = torch.empty(len(env_ids), device=self.device).uniform_(-0.2, 0.2)
+
+
 
 @torch.jit.script
 def compute_rewards(
@@ -161,12 +184,18 @@ def compute_rewards(
     pole_vel: torch.Tensor,
     cart_pos: torch.Tensor,
     cart_vel: torch.Tensor,
+    target_pole_pos: torch.Tensor,   # <-- NEW
     reset_terminated: torch.Tensor,
 ):
     rew_alive = rew_scale_alive * (1.0 - reset_terminated.float())
     rew_termination = rew_scale_terminated * reset_terminated.float()
-    rew_pole_pos = rew_scale_pole_pos * torch.sum(torch.square(pole_pos).unsqueeze(dim=1), dim=-1)
+
+    # Penalize deviation from the target pole position
+    pole_error = pole_pos - target_pole_pos
+    rew_pole_pos = rew_scale_pole_pos * torch.sum(torch.square(pole_error).unsqueeze(dim=1), dim=-1)
+
     rew_cart_vel = rew_scale_cart_vel * torch.sum(torch.abs(cart_vel).unsqueeze(dim=1), dim=-1)
     rew_pole_vel = rew_scale_pole_vel * torch.sum(torch.abs(pole_vel).unsqueeze(dim=1), dim=-1)
+
     total_reward = rew_alive + rew_termination + rew_pole_pos + rew_cart_vel + rew_pole_vel
     return total_reward
